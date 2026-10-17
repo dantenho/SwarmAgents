@@ -49,3 +49,5 @@ hypothesis
 rich
 loguru
 duckdb
+meson
+meson-python

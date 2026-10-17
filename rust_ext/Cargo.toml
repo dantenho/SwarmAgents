@@ -1,0 +1,16 @@
+[package]
+name = "swarmagents-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "swarmagents_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.30.1", features = ["extension-module"] }
+rayon = "1.10"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
