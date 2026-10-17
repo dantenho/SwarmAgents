@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SwarmAgents"
+version = "0.1.0"
+description = "Python repository for SwarmAgents - agents and examples"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.15"
+
+[tool.ruff]
+line-length = 88
+target-version = "py315"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E203"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
