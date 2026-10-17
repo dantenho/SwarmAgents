@@ -11,6 +11,7 @@ pyarrow==26.0.0
 numpy==2.5.4
 sympy==1.14.0
 langextract==1.7.1
+langsmith==0.14.11
 faiss-cpu==1.15.1
 pgvector==0.5.1
 sentence-transformers==6.1.0
@@ -30,6 +31,7 @@ ruff==1.99
 uvicorn==0.54.0
 fastmcp==4.1.0
 ty
+langgraph-swarm
 redis==8.1.0
 lifeguard
 neo4j==6.4.1
