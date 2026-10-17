@@ -38,3 +38,14 @@ neo4j==6.4.1
 pillow==13.0.0
 requests==2.34.2
 maturin
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-prometheus
+prometheus-client==0.26.0
+protobuf
+openvino
+logfire
+hypothesis
+rich
+loguru
+duckdb
