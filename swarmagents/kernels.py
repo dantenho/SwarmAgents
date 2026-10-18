@@ -97,9 +97,7 @@ def _cosine_chunk(pairs: list[tuple[list[int], list[int]]]) -> list[float]:
     return [cosine_int8(a, b) for a, b in pairs]
 
 
-def batch_cosine(
-    vectors_a: list[list[int]], vectors_b: list[list[int]]
-) -> list[float]:
+def batch_cosine(vectors_a: list[list[int]], vectors_b: list[list[int]]) -> list[float]:
     """Cosine similarity for aligned batches, dispatched to the best backend."""
     if len(vectors_a) != len(vectors_b):
         raise ValueError("batches must be aligned")
@@ -123,7 +121,7 @@ def batch_cosine(
         return [x for part in results for x in part]
 
     if _have_rust():
-        from swarmagents_core import cosine_similarity_int8
+        from swarmagents_core import cosine_similarity_int8  # type: ignore[attr-defined]
 
         return [
             cosine_similarity_int8(a, b)

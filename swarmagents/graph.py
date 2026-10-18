@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 from langchain.agents import create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -125,7 +125,7 @@ def build_swarm(
     supervisor = build_supervisor(supervisor_model, {r: models[r] for r in roles})
     agents = {role: build_worker(models[role], role) for role in roles}
 
-    graph = StateGraph(SwarmState)
+    graph = StateGraph(cast(Any, SwarmState))
     graph.add_node("supervisor", supervisor)
     for role, agent in agents.items():
         graph.add_node(role, agent)

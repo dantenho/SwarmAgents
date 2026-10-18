@@ -79,8 +79,9 @@ def main() -> None:
     except ImportError:
         cosine_int8_numba = None
 
+    cosine_rust: Any
     try:
-        from swarmagents_core import cosine_similarity_int8 as cosine_rust
+        from swarmagents_core import cosine_similarity_int8 as cosine_rust  # type: ignore[attr-defined]
     except ImportError:
         cosine_rust = None
 
@@ -136,6 +137,7 @@ def main() -> None:
         t_numba_batch = None
 
     if cosine_rust is not None:
+
         def rust_batch() -> None:
             """Score the whole batch via the pyo3 Rust extension."""
             for x, y in zip(batch_a, batch_b, strict=True):

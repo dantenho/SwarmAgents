@@ -165,9 +165,7 @@ def get_provider_spec(name: str) -> ProviderSpec:
     key = name.lower()
     if key not in REGISTRY:
         known = ", ".join(PROVIDER_NAMES)
-        raise ProviderError(
-            f"Unknown provider {name!r}. Known providers: {known}"
-        )
+        raise ProviderError(f"Unknown provider {name!r}. Known providers: {known}")
     return REGISTRY[key]
 
 
@@ -177,8 +175,7 @@ def _api_key(spec: ProviderSpec) -> str | None:
     key = os.getenv(spec.api_key_env)
     if not key:
         raise ProviderError(
-            f"Provider {spec.name!r} requires an API key in "
-            f"{spec.api_key_env}"
+            f"Provider {spec.name!r} requires an API key in {spec.api_key_env}"
         )
     return key
 
@@ -220,8 +217,7 @@ def _azure_model(spec: ProviderSpec, model: str, **kwargs: Any) -> BaseChatModel
     endpoint = os.getenv(spec.base_url_env or "", "")
     if not endpoint:
         raise ProviderError(
-            f"Provider {spec.name!r} requires an endpoint in "
-            f"{spec.base_url_env}"
+            f"Provider {spec.name!r} requires an endpoint in {spec.base_url_env}"
         )
     try:
         from langchain_openai import AzureChatOpenAI

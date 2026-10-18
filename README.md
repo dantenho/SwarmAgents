@@ -38,7 +38,7 @@ Embeddings without any API key:
 ```python
 from swarmagents import embed, embed_batch, EMBEDDING_DIM
 
-vec = embed("hello world")           # 384-dim int8 list, Redis-cached
+vec = embed("hello world")  # 384-dim int8 list, Redis-cached
 vecs = embed_batch(["a", "b"])
 ```
 

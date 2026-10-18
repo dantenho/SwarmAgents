@@ -57,3 +57,10 @@ maturin = ">=1"
 
 [tool.pixi.environments]
 default = { features = ["node", "rust"] }
+
+[tool.ty.src]
+include = ["swarmagents", "benchmarks", "tests", "examples"]
+
+[[tool.ty.overrides]]
+include = ["swarmagents/kernels.py", "benchmarks"]
+rules = { unresolved-import = "ignore", invalid-assignment = "ignore" }

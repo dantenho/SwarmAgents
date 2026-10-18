@@ -102,3 +102,17 @@ Tested 2.1.3, 2.2.6, 2.3.4, 2.5.4 on 3.15.0b1: ALL segfault in
 numpy.random/matmul. No older wheel fixes this — the 3.15 beta ABI predates
 every published wheel. numpy stays on 3.12/3.14 until 3.15-stable wheels
 exist. The kernels dispatcher avoids numpy entirely outside the numba path.
+
+## Type checking policy (ruff + ty, 2026-10-18)
+
+- Gates before every commit: `ruff check .`, `ruff format .`,
+  `ty check`, and `pytest tests/ -q`.
+- ty config lives in pyproject.toml `[tool.ty.src]`; overrides ignore
+  `unresolved-import` (pyo3 module has no stubs) and `invalid-assignment`
+  (benchmark monkeypatches) for `swarmagents/kernels.py` and `benchmarks/`.
+- ty does NOT honor `# type: ignore[...]` comments — use pyproject
+  overrides, not inline ignores.
+- Remaining accepted diagnostic: 1 deprecation warning for
+  `torch.ao.quantization.quantize_dynamic` (only quantization API available).
+- LangGraph `StateGraph(TypedDict)` needs `cast(Any, schema)` to satisfy
+  ty's structural TypedDictLike bound (runtime is fine either way).

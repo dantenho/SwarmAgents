@@ -65,12 +65,20 @@ def render(path: str = "langswarm/architecture.png") -> str:
             "#238636",
         )
         if any(k in name.lower() for k in palette):
-            color = next(
-                v for k, v in palette.items() if k in name.lower()
-            )
+            color = next(v for k, v in palette.items() if k in name.lower())
         box = dict(boxstyle="round,pad=0.5", facecolor=color, edgecolor="none")
-        ax.text(x, y, name, ha="center", va="center", fontsize=11,
-               color="white", fontweight="bold", bbox=box, linespacing=1.4)
+        ax.text(
+            x,
+            y,
+            name,
+            ha="center",
+            va="center",
+            fontsize=11,
+            color="white",
+            fontweight="bold",
+            bbox=box,
+            linespacing=1.4,
+        )
         del kind
 
     ax.set_title(

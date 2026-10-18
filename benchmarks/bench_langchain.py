@@ -121,21 +121,21 @@ def bench_swarm_construction() -> dict[str, Any]:
         def bind_tools(self, tools, **kwargs):
             return self
 
-
+    import swarmagents.swarm as swarm_mod
     from swarmagents import providers as providers_mod
 
     orig = providers_mod.get_chat_model
-    providers_mod.get_chat_model = lambda *a, **k: FakeModel()
+    orig_swarm = swarm_mod.get_chat_model
+    providers_mod.get_chat_model = lambda *a, **k: FakeModel()  # type: ignore[assignment]
     try:
-        import swarmagents.swarm as swarm_mod
-
-        swarm_mod.get_chat_model = lambda *a, **k: FakeModel()
+        swarm_mod.get_chat_model = lambda *a, **k: FakeModel()  # type: ignore[assignment]
         build = swarm_mod.create_langgraph_swarm
         record = timed("build handoff swarm (fake model)", build, "openai")
         built = record["result"]
         assert built is not None
     finally:
-        providers_mod.get_chat_model = orig
+        providers_mod.get_chat_model = orig  # type: ignore[assignment]
+        swarm_mod.get_chat_model = orig_swarm  # type: ignore[assignment]
     return record
 
 
@@ -143,7 +143,9 @@ def bench_rust_vs_python() -> dict[str, Any] | None:
     import random
 
     try:
-        from swarmagents_core import cosine_similarity_int8 as rust_cosine
+        from swarmagents_core import (  # type: ignore[attr-defined]
+            cosine_similarity_int8 as rust_cosine,
+        )
     except ImportError:
         print("pyo3/rust: not installed, skipping")
         return None

@@ -64,8 +64,6 @@ def test_swarm_builds_with_fake_model(monkeypatch):
         def bind_tools(self, tools, **kwargs):
             return self
 
-    monkeypatch.setattr(
-        "swarmagents.swarm.get_chat_model", lambda *a, **k: FakeModel()
-    )
+    monkeypatch.setattr("swarmagents.swarm.get_chat_model", lambda *a, **k: FakeModel())
     swarm = create_langgraph_swarm(provider="openai")
     assert swarm is not None

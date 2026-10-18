@@ -78,10 +78,7 @@ def create_langgraph_swarm(
             if other != role
         ]
 
-    agents = [
-        build_swarm_agent(role, chat_model, handoffs[role])
-        for role in roles
-    ]
+    agents = [build_swarm_agent(role, chat_model, handoffs[role]) for role in roles]
     return create_swarm(
         agents,
         default_active_agent=roles[0],
