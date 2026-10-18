@@ -10,17 +10,15 @@ import importlib.util
 import sys
 import threading
 import timeit
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, Callable
 
 DIM = 384
 N_BATCH = 10_000
 N_THREADS = 8
 
 
-def _lazy_njit():
+def _lazy_njit() -> Callable[..., Any] | None:
+    """Return the numba njit decorator when numba is importable, else None."""
     if importlib.util.find_spec("numba") is None:
         return None
     from numba import njit
@@ -29,7 +27,15 @@ def _lazy_njit():
 
 
 def cosine_int8_python(a: list[int], b: list[int]) -> float:
-    """Pure-Python int8 cosine similarity."""
+    """Compute int8 cosine similarity in pure Python.
+
+    Args:
+        a: First vector.
+        b: Second vector of the same length.
+
+    Returns:
+        Cosine similarity in [-1.0, 1.0].
+    """
     dot = 0
     na = 0
     nb = 0
@@ -60,12 +66,23 @@ def run_python_threaded(batch_a: list[list[int]], batch_b: list[list[int]]) -> N
         t.join()
 
 
-def run_python_sequential(batch_a, batch_b) -> None:
+def run_python_sequential(batch_a: list[list[int]], batch_b: list[list[int]]) -> None:
+    """Score the whole batch sequentially in pure Python."""
     for x, y in zip(batch_a, batch_b, strict=True):
         cosine_int8_python(x, y)
 
 
-def _bench(label: str, fn, *args) -> float:
+def _bench(label: str, fn: Callable[..., Any], *args: Any) -> float:
+    """Time fn and print the best-of-3 duration.
+
+    Args:
+        label: Display name for the benchmark row.
+        fn: Callable to measure.
+        *args: Arguments forwarded to fn.
+
+    Returns:
+        Best (minimum) duration in seconds.
+    """
     best = min(timeit.repeat(lambda: fn(*args), number=1, repeat=3))
     unit = "us" if best < 0.001 else "ms"
     value = best * 1000 if unit == "ms" else best * 1_000_000
@@ -74,6 +91,7 @@ def _bench(label: str, fn, *args) -> float:
 
 
 def main() -> None:
+    """Run the free-threading benchmark and print per-backend speedups."""
     print(f"python: {sys.version.split()[0]}  GIL enabled: {sys._is_gil_enabled()}")
     import numpy as np
 
@@ -98,7 +116,7 @@ def main() -> None:
         from numba import prange
 
         @njit_dec(cache=True, parallel=True)
-        def batch_numba(a, b):
+        def batch_numba(a: "np.ndarray", b: "np.ndarray") -> "np.ndarray":
             out = np.empty(a.shape[0])
             for i in prange(a.shape[0]):
                 dot = 0

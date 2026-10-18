@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import timeit
+from typing import Any, Callable
 
 import numpy as np
 
@@ -11,7 +12,15 @@ N_BATCH = 10_000
 
 
 def cosine_int8_python(a: list[int], b: list[int]) -> float:
-    """Pure-Python int8 cosine similarity (no JIT)."""
+    """Compute int8 cosine similarity in pure Python (no JIT).
+
+    Args:
+        a: First vector.
+        b: Second vector of the same length.
+
+    Returns:
+        Cosine similarity in [-1.0, 1.0].
+    """
     dot = 0
     na = 0
     nb = 0
@@ -24,7 +33,17 @@ def cosine_int8_python(a: list[int], b: list[int]) -> float:
     return dot / ((na**0.5) * (nb**0.5))
 
 
-def _run_benchmark(label: str, fn, *args) -> float:
+def _run_benchmark(label: str, fn: Callable[..., Any], *args: Any) -> float:
+    """Time fn and print the best-of-5 duration.
+
+    Args:
+        label: Display name for the benchmark row.
+        fn: Callable to measure.
+        *args: Arguments forwarded to fn.
+
+    Returns:
+        Best (minimum) duration in seconds.
+    """
     best = min(timeit.repeat(lambda: fn(*args), number=1, repeat=5))
     unit = "us" if best < 0.001 else "ms"
     value = best * 1000 if unit == "ms" else best * 1_000_000
@@ -33,6 +52,7 @@ def _run_benchmark(label: str, fn, *args) -> float:
 
 
 def main() -> None:
+    """Run all kernel benchmarks and print per-backend speedups."""
     rng = np.random.default_rng(42)
     a_np = rng.integers(-127, 128, size=DIM, dtype=np.int8)
     b_np = rng.integers(-127, 128, size=DIM, dtype=np.int8)
@@ -84,6 +104,7 @@ def main() -> None:
     batch_b = [b_list] * N_BATCH
 
     def python_batch() -> None:
+        """Score the whole batch sequentially in pure Python."""
         for x, y in zip(batch_a, batch_b, strict=True):
             cosine_int8_python(x, y)
 
@@ -116,6 +137,7 @@ def main() -> None:
 
     if cosine_rust is not None:
         def rust_batch() -> None:
+            """Score the whole batch via the pyo3 Rust extension."""
             for x, y in zip(batch_a, batch_b, strict=True):
                 cosine_rust(x, y)
 

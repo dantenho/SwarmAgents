@@ -13,6 +13,7 @@ import random
 import statistics
 import sys
 import time
+from typing import Callable, TypeVar
 
 from swarmagents.kernels import active_backend, gil_enabled
 
@@ -21,8 +22,15 @@ CORPUS = 2_000
 K = 10
 REPEAT = 20
 
+T = TypeVar("T")
 
-def cosine(a: list[int], b: list[int]) -> float:
+
+Vector = list[int]
+ScoredDoc = tuple[int, float]
+
+
+def cosine(a: Vector, b: Vector) -> float:
+    """Compute int8 cosine similarity between two equal-length vectors."""
     dot = 0
     na = 0
     nb = 0
@@ -35,16 +43,39 @@ def cosine(a: list[int], b: list[int]) -> float:
     return dot / ((na**0.5) * (nb**0.5))
 
 
-def rerank_nojit(query, corpus, k):
+def rerank_nojit(query: Vector, corpus: list[Vector], k: int) -> list[ScoredDoc]:
+    """Rerank the corpus against a query on a single thread (pure Python).
+
+    Args:
+        query: Query vector.
+        corpus: Candidate vectors to score.
+        k: Number of top results to return.
+
+    Returns:
+        The k highest-scoring (index, score) pairs, descending.
+    """
     scores = [cosine(query, c) for c in corpus]
     ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
     return [(i, scores[i]) for i in ranked[:k]]
 
 
-def rerank_freethread(query, corpus, k, workers):
+def rerank_freethread(
+    query: Vector, corpus: list[Vector], k: int, workers: int
+) -> list[ScoredDoc]:
+    """Rerank the corpus using a thread pool (parallel only without the GIL).
+
+    Args:
+        query: Query vector.
+        corpus: Candidate vectors to score.
+        k: Number of top results to return.
+        workers: Thread pool size.
+
+    Returns:
+        The k highest-scoring (index, score) pairs, descending.
+    """
     from concurrent.futures import ThreadPoolExecutor
 
-    def score_chunk(chunk):
+    def score_chunk(chunk: list[tuple[int, Vector]]) -> list[ScoredDoc]:
         return [(i, cosine(query, c)) for i, c in chunk]
 
     indexed = list(enumerate(corpus))
@@ -57,8 +88,18 @@ def rerank_freethread(query, corpus, k, workers):
     return flat[:k]
 
 
-def avg_ms(fn, *args, repeat: int = REPEAT) -> float:
-    samples = []
+def avg_ms(fn: Callable[..., T], *args: object, repeat: int = REPEAT) -> float:
+    """Return the mean wall-clock duration of fn in milliseconds.
+
+    Args:
+        fn: Callable to measure.
+        *args: Arguments forwarded to fn.
+        repeat: Number of timed invocations.
+
+    Returns:
+        Mean duration in ms across all invocations.
+    """
+    samples: list[float] = []
     for _ in range(repeat):
         t0 = time.perf_counter()
         fn(*args)
@@ -67,6 +108,7 @@ def avg_ms(fn, *args, repeat: int = REPEAT) -> float:
 
 
 def main() -> None:
+    """Run the rerank benchmark and print avg-ms timings per backend."""
     print(f"python {sys.version.split()[0]}  GIL enabled: {gil_enabled()}")
     print(f"kernels backend: {active_backend()}")
     print(f"rerank: corpus={CORPUS} dim={DIM} k={K} repeat={REPEAT}")
