@@ -80,7 +80,7 @@ def render(path: str = "langswarm/architecture.png") -> str:
         pad=20,
         fontweight="bold",
     )
-    fig.savefig(path, dpi=150, facecolor="#0d1117", bbox_inches="tight")
+    fig.savefig(path, dpi=72, facecolor="#0d1117", bbox_inches="tight")
     plt.close(fig)
     return path
 
