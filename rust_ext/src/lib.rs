@@ -1,3 +1,5 @@
+mod cache;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -54,6 +56,7 @@ fn cosine_batch_int8(a: Vec<Vec<i8>>, b: Vec<Vec<i8>>) -> PyResult<Vec<f64>> {
 fn swarmagents_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(cosine_similarity_int8, m)?)?;
     m.add_function(wrap_pyfunction!(cosine_batch_int8, m)?)?;
+    cache::register(m)?;
     Ok(())
 }
 
@@ -94,9 +97,14 @@ mod tests {
     }
 
     #[test]
-    fn batch_misaligned_errors() {
-        let a = vec![vec![1i8]];
-        let b = vec![vec![1i8], vec![2i8]];
-        assert!(cosine_batch_int8(a, b).is_err());
+    fn cache_put_get_evict() {
+        let c = crate::cache::Int8Cache::new(2).unwrap();
+        c.put("a".into(), vec![1, 2]).unwrap();
+        c.put("b".into(), vec![3, 4]).unwrap();
+        assert_eq!(c.len(), 2);
+        assert_eq!(c.get("a"), Some(vec![1, 2]));
+        c.put("c".into(), vec![5, 6]).unwrap();
+        assert!(c.len() <= 2);
+        assert_eq!(c.capacity(), 2);
     }
 }

@@ -12,6 +12,11 @@ from swarmagents.kernels import (
     cosine_int8,
     top_k,
 )
+from swarmagents.agents import (
+    DEFAULT_SPECIALISTS,
+    SPECIALIST_ROLES,
+    create_specialist_swarm,
+)
 from swarmagents.vectordb import (
     LocalVectorStore,
     SupabaseVectorStore,
@@ -34,6 +39,9 @@ __all__ = (
     "LocalVectorStore",
     "SupabaseVectorStore",
     "create_vector_store",
+    "DEFAULT_SPECIALISTS",
+    "SPECIALIST_ROLES",
+    "create_specialist_swarm",
 )
 __version__ = "0.1.0"
 

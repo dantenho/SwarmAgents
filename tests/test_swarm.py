@@ -187,3 +187,65 @@ def test_graphview_cypher_and_mermaid(tmp_path):
     assert result["neo4j_pushed"] is False
     assert (tmp_path / "swarm_graph.cypher").exists()
     assert (tmp_path / "swarm_graph.mmd").exists()
+
+
+def test_specialist_roles_defined():
+    from swarmagents.agents import SPECIALIST_ROLES
+
+    expected = {
+        "codereviewer",
+        "debugger",
+        "coder",
+        "memory",
+        "deepresearch",
+        "guidecreator",
+        "judge",
+        "caching",
+    }
+    assert set(SPECIALIST_ROLES) == expected
+    for role, prompt in SPECIALIST_ROLES.items():
+        assert len(prompt) > 60, f"prompt too thin for {role}"
+
+
+def test_specialist_swarm_builds(monkeypatch):
+    class FakeModel:
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+    monkeypatch.setattr(
+        "swarmagents.agents.create_agent",
+        lambda model, tools, system_prompt, name: {
+            "model": model,
+            "tools": tools,
+            "name": name,
+        },
+    )
+    monkeypatch.setattr(
+        "swarmagents.agents.create_swarm",
+        lambda agents, default_active_agent: {
+            "agents": agents,
+            "default": default_active_agent,
+        },
+    )
+    from swarmagents.agents import create_specialist_swarm
+
+    swarm = create_specialist_swarm(FakeModel())
+    assert swarm["default"] == "codereviewer"
+    assert len(swarm["agents"]) == 8
+    from swarmagents.agents import SPECIALIST_ROLES
+
+    names = {a["name"] for a in swarm["agents"]}
+    assert names == set(SPECIALIST_ROLES)
+
+
+def test_rust_cache_roundtrip_and_eviction():
+    from swarmagents_core import Int8Cache
+
+    c = Int8Cache(3)
+    for i in range(5):
+        c.put(f"k{i}", [i, i + 1])
+    assert c.len() <= 3
+    assert c.capacity() == 3
+    c.put("hit", [9, 9])
+    assert c.get("hit") == [9, 9]
+    assert c.get("definitely-missing") is None
