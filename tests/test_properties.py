@@ -10,6 +10,13 @@ from swarmagents.kernels import batch_cosine, cosine_int8, top_k
 int8 = st.integers(min_value=-127, max_value=127)
 vectors = st.lists(int8, min_size=1, max_size=64)
 empty_friendly = st.lists(int8, min_size=0, max_size=32)
+matched_sizes = st.integers(min_value=1, max_value=64)
+matched_pairs = st.tuples(matched_sizes).flatmap(
+    lambda size: st.tuples(
+        st.lists(int8, min_size=size[0], max_size=size[0]),
+        st.lists(int8, min_size=size[0], max_size=size[0]),
+    )
+)
 
 
 @given(a=vectors, b=vectors)
@@ -22,33 +29,27 @@ def test_cosine_identity(a, b):
     assert abs(batch[0] - cosine_int8(a, a)) < 1e-9
 
 
-@given(a=vectors, b=vectors)
-def test_cosine_symmetry(a, b):
+@given(pair=matched_pairs)
+def test_cosine_symmetry(pair):
     """cos(a, b) == cos(b, a) when lengths match."""
-    from hypothesis import assume
-
-    assume(len(a) == len(b))
+    a, b = pair
     assert abs(cosine_int8(a, b) - cosine_int8(b, a)) < 1e-9
 
 
-@given(a=vectors, b=vectors)
+@given(pair=matched_pairs)
 @settings(max_examples=50)
-def test_cosine_range(a, b):
+def test_cosine_range(pair):
     """Similarity always lies in [-1, 1] for matching lengths."""
-    from hypothesis import assume
-
-    assume(len(a) == len(b))
+    a, b = pair
     score = cosine_int8(a, b)
     assert -1.0 <= score <= 1.0
 
 
-@given(a=vectors, b=vectors, k=st.integers(min_value=1, max_value=10))
+@given(pair=matched_pairs, k=st.integers(min_value=1, max_value=10))
 @settings(max_examples=30, deadline=None)
-def test_top_k_invariants(a, b, k):
+def test_top_k_invariants(pair, k):
     """top_k returns sorted, unique, at most k results for equal lengths."""
-    from hypothesis import assume
-
-    assume(len(a) == len(b))
+    a, b = pair
     corpus = [a, b]
     results = top_k(a, corpus, k=k)
     assert len(results) <= k

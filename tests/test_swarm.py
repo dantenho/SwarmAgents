@@ -109,3 +109,55 @@ def test_rust_batch_misaligned_raises():
 
     with pytest.raises(ValueError):
         cosine_batch_int8([[1]], [[1], [2]])
+
+
+def test_tracing_disabled_without_env(monkeypatch):
+    from swarmagents.tracing import get_tracer, tracing_enabled
+
+    monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
+    monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
+    assert not tracing_enabled()
+    assert get_tracer() is None
+
+
+def test_tracing_enabled_builds_tracer(monkeypatch):
+    from swarmagents.tracing import get_tracer, tracing_enabled
+
+    monkeypatch.setenv("LANGSMITH_TRACING", "true")
+    monkeypatch.setenv("LANGSMITH_API_KEY", "lsv2_test_key")
+    monkeypatch.setenv("LANGSMITH_PROJECT", "swarmagents-test")
+    assert tracing_enabled()
+    tracer = get_tracer()
+    assert tracer is not None
+    assert getattr(tracer, "project_name", None) == "swarmagents-test"
+
+
+def test_traced_decorator_passthrough():
+    from swarmagents.tracing import traced
+
+    def sample(x: int) -> int:
+        return x * 2
+
+    wrapped = traced(sample)
+    assert wrapped(21) == 42
+
+
+def test_run_swarm_traced_offline(monkeypatch):
+    class FakeModel:
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+        def invoke(self, messages, config=None, **kwargs):
+            from langchain_core.messages import AIMessage
+
+            return AIMessage(content="fake answer")
+
+    monkeypatch.setattr(
+        "swarmagents.tracing.get_chat_model", lambda *a, **k: FakeModel()
+    )
+    monkeypatch.setattr("swarmagents.swarm.get_chat_model", lambda *a, **k: FakeModel())
+    monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
+    from swarmagents.tracing import run_swarm_traced
+
+    result = run_swarm_traced("hello", provider="openai")
+    assert isinstance(result, str)
