@@ -95,3 +95,10 @@ MiniLM vectors across pure Python, Numba `@njit`, and the pyo3 Rust extension.
   (`importlib.util.find_spec`) so 3.15 paths degrade gracefully.
 - The pyo3 extension builds from source per-interpreter via maturin, so it
   is the 3.15-ready path for native speed today.
+
+## numpy on 3.15 (updated)
+
+Tested 2.1.3, 2.2.6, 2.3.4, 2.5.4 on 3.15.0b1: ALL segfault in
+numpy.random/matmul. No older wheel fixes this — the 3.15 beta ABI predates
+every published wheel. numpy stays on 3.12/3.14 until 3.15-stable wheels
+exist. The kernels dispatcher avoids numpy entirely outside the numba path.
