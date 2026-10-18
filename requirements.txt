@@ -51,3 +51,4 @@ loguru
 duckdb
 meson
 meson-python
+langswarm

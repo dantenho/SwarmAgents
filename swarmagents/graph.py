@@ -70,19 +70,15 @@ class SwarmState(TypedDict, total=False):
 
 def build_worker(model: BaseChatModel, role: str) -> Any:
     """Create a worker agent node for a role."""
-    worker_tool = tool(
-        lambda result: {"result": result},
-        name="submit_result",
-        description="Submit this worker's result back to the supervisor.",
-    )
 
-    def _submit_result(result: str) -> dict[str, str]:
+    @tool
+    def submit_result(result: str) -> dict[str, str]:
+        """Submit this worker's result back to the supervisor."""
         return {"result": result}
 
-    worker_tool.func = _submit_result  # type: ignore[attr-defined]
     return create_agent(
         model,
-        tools=[worker_tool],
+        tools=[submit_result],
         system_prompt=(
             f"{WORKER_PROMPTS[role]}\n"
             "When done, call 'submit_result' with your complete findings."
