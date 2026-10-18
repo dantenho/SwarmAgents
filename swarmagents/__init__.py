@@ -5,17 +5,17 @@ package imports cleanly on interpreters without langchain/numba installed
 (e.g. the 3.15 free-threaded venv).
 """
 
+from swarmagents.agents import (
+    DEFAULT_SPECIALISTS,
+    SPECIALIST_ROLES,
+    create_specialist_swarm,
+)
 from swarmagents.embeddings import EMBEDDING_DIM, MODEL_NAME, embed, embed_batch
 from swarmagents.kernels import (
     active_backend,
     batch_cosine,
     cosine_int8,
     top_k,
-)
-from swarmagents.agents import (
-    DEFAULT_SPECIALISTS,
-    SPECIALIST_ROLES,
-    create_specialist_swarm,
 )
 from swarmagents.vectordb import (
     LocalVectorStore,
