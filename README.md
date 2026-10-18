@@ -73,3 +73,15 @@ See `AGENTS.md` for repo conventions and known caveats.
 ## License
 
 See `LICENSE`.
+
+## Benchmarks
+
+`benchmarks/bench_kernels.py` compares pure Python (no JIT) vs Numba `@njit`
+vs the pyo3/Rust extension on int8 cosine similarity (384-dim):
+
+| Scenario | Python | Numba | Rust |
+|---|---|---|---|
+| Single pair | 39.9 µs | 0.36 µs (110x) | 7.0 µs (5.7x) |
+| 10k batch | 362 ms | 188 µs (1922x) | 59 ms (6.1x) |
+
+Run: `.venv/bin/python benchmarks/bench_kernels.py`

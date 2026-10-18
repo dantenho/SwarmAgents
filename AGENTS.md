@@ -68,3 +68,15 @@ for unsupported managers.
 - Redis AVX-512/ThinLTO/Polly/mimalloc are from-source build flags; pinned as
   intent in Pixi, not built here.
 - "lifeguard" (Python) is a data-quality validation lib, not a service.
+
+## Benchmarks (recorded 2026-10-18, Xeon AVX-512, best of 5)
+
+`benchmarks/bench_kernels.py` measures int8 cosine similarity on 384-dim
+MiniLM vectors across pure Python, Numba `@njit`, and the pyo3 Rust extension.
+
+- Single pair: python 39.9us, numba 0.36us (110x), rust 7.0us (5.7x)
+- 10k-pair batch: python 362ms, numba-parallel 188us (1922x), rust 59ms (6.1x)
+- Rule: keep hot numeric loops in Numba (`@njit(cache=True, parallel=True)`
+  with `prange`); pure Python only for orchestration. pyo3 per-call list
+  marshalling dominates Rust timings — pass NumPy arrays if that path ever
+  becomes hot. Re-run with `.venv/bin/python benchmarks/bench_kernels.py`.
