@@ -161,3 +161,29 @@ def test_run_swarm_traced_offline(monkeypatch):
 
     result = run_swarm_traced("hello", provider="openai")
     assert isinstance(result, str)
+
+
+def test_graphview_topology():
+    from swarmagents.graphview import swarm_topology
+
+    topo = swarm_topology()
+    names = {a["name"] for a in topo["agents"]}
+    assert names == {"researcher", "analyst", "writer"}
+    assert len(topo["edges"]) == 6
+
+
+def test_graphview_cypher_and_mermaid(tmp_path):
+    from swarmagents.graphview import export, swarm_topology, to_cypher, to_mermaid
+
+    topo = swarm_topology()
+    cypher = to_cypher(topo)
+    assert 'MERGE (a:Agent {name: "researcher"})' in cypher
+    assert "HANDS_OFF_TO" in cypher
+    mermaid = to_mermaid(topo)
+    assert mermaid.startswith("graph LR")
+    assert "researcher -->|hands off| analyst" in mermaid
+
+    result = export(path=str(tmp_path))
+    assert result["neo4j_pushed"] is False
+    assert (tmp_path / "swarm_graph.cypher").exists()
+    assert (tmp_path / "swarm_graph.mmd").exists()

@@ -32,6 +32,7 @@ dependencies = [
     "langchain-openai==1.7.2",
     "langchain-anthropic==1.7.6",
     "langchain-community==0.4.2",
+    "langchain-neo4j>=1.1",
     "langgraph==1.2.16",
     "numba>=0.68",
 ]

@@ -35,6 +35,7 @@ langgraph-swarm
 redis==8.1.0
 lifeguard
 neo4j==6.4.1
+langchain-neo4j
 pillow==13.0.0
 requests==2.34.2
 maturin
