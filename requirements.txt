@@ -52,3 +52,4 @@ duckdb
 meson
 meson-python
 langswarm
+numba==0.68.0
