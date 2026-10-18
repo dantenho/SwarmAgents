@@ -67,3 +67,45 @@ def test_swarm_builds_with_fake_model(monkeypatch):
     monkeypatch.setattr("swarmagents.swarm.get_chat_model", lambda *a, **k: FakeModel())
     swarm = create_langgraph_swarm(provider="openai")
     assert swarm is not None
+
+
+def test_vectordb_local_roundtrip(monkeypatch):
+    from swarmagents.vectordb import LocalVectorStore
+
+    monkeypatch.setattr(
+        "swarmagents.vectordb.embed",
+        lambda t, use_cache=True: [ord(c) % 127 for c in t.ljust(384, " ")],
+    )
+    store = LocalVectorStore()
+    ids = store.add(["alpha doc", "beta doc"], [{"n": 1}, {"n": 2}])
+    assert ids == ["0", "1"]
+    results = store.search("alpha doc", k=1)
+    assert len(results) == 1
+    text, score, meta = results[0]
+    assert text == "alpha doc" and score == 1.0 and meta == {"n": 1}
+
+
+def test_create_vector_store_falls_back_local(monkeypatch):
+    from swarmagents.vectordb import LocalVectorStore, create_vector_store
+
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_KEY", raising=False)
+    assert isinstance(create_vector_store(), LocalVectorStore)
+
+
+def test_rust_batch_matches_single():
+    from swarmagents_core import cosine_batch_int8, cosine_similarity_int8
+
+    a = [1, 2, 3, 4]
+    b = [4, 3, 2, 1]
+    batch = cosine_batch_int8([a, a], [b, a])
+    assert abs(batch[0] - cosine_similarity_int8(a, b)) < 1e-12
+    assert abs(batch[1] - 1.0) < 1e-12
+
+
+def test_rust_batch_misaligned_raises():
+    import pytest
+    from swarmagents_core import cosine_batch_int8
+
+    with pytest.raises(ValueError):
+        cosine_batch_int8([[1]], [[1], [2]])

@@ -12,6 +12,11 @@ from swarmagents.kernels import (
     cosine_int8,
     top_k,
 )
+from swarmagents.vectordb import (
+    LocalVectorStore,
+    SupabaseVectorStore,
+    create_vector_store,
+)
 
 __all__ = (
     "EMBEDDING_DIM",
@@ -26,6 +31,9 @@ __all__ = (
     "run_langgraph_swarm",
     "run_swarm",
     "top_k",
+    "LocalVectorStore",
+    "SupabaseVectorStore",
+    "create_vector_store",
 )
 __version__ = "0.1.0"
 

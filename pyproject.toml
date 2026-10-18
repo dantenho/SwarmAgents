@@ -62,5 +62,5 @@ default = { features = ["node", "rust"] }
 include = ["swarmagents", "benchmarks", "tests", "examples"]
 
 [[tool.ty.overrides]]
-include = ["swarmagents/kernels.py", "benchmarks"]
+include = ["swarmagents/kernels.py", "swarmagents/vectordb.py", "benchmarks", "tests/test_swarm.py"]
 rules = { unresolved-import = "ignore", invalid-assignment = "ignore" }
