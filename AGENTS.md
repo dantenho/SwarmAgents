@@ -80,3 +80,18 @@ MiniLM vectors across pure Python, Numba `@njit`, and the pyo3 Rust extension.
   with `prange`); pure Python only for orchestration. pyo3 per-call list
   marshalling dominates Rust timings — pass NumPy arrays if that path ever
   becomes hot. Re-run with `.venv/bin/python benchmarks/bench_kernels.py`.
+
+## Python 3.15 status (recorded 2026-10-18)
+
+- CPython 3.15.0b1 (GIL and free-threaded builds) installed via uv.
+- Free-threading verified working: 8 OS threads scale 3.84x on pure-Python
+  CPU work with `PYTHON_GIL=0` (PEP 703). `sys._is_gil_enabled()` to check.
+- numpy 2.5.4 wheels are NOT yet 3.15-ABI compatible: `numpy.random` and
+  `@`/matmul segfault on 3.15.0b1 (import and basic ops are fine). Wait for
+  wheels built against 3.15 stable; do not pin numpy in a 3.15 venv yet.
+- Numba 0.68/llvmlite 0.50 segfault on import under 3.15.0b1 (both GIL and
+  free-threaded). Numba supports free-threading on 3.14t (verified working,
+  ~1635x on the int8 batch kernel). Keep numba imports lazy
+  (`importlib.util.find_spec`) so 3.15 paths degrade gracefully.
+- The pyo3 extension builds from source per-interpreter via maturin, so it
+  is the 3.15-ready path for native speed today.
