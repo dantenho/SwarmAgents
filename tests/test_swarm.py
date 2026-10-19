@@ -254,3 +254,93 @@ def test_rust_cache_roundtrip_and_eviction():
     c.put("hit", [9, 9])
     assert c.get("hit") == [9, 9]
     assert c.get("definitely-missing") is None
+
+
+def test_fan_out_parallel(monkeypatch):
+    from swarmagents import parallel as par
+
+    class FakeModel:
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+    seen = []
+
+    def fake_build(role, model, handoffs, tools):
+        seen.append(role)
+
+        class Agent:
+            def invoke(self, payload, config=None):
+                class Msg:
+                    content = f"answer from {role}"
+
+                return {"messages": [Msg()]}
+
+        return Agent()
+
+    monkeypatch.setattr(par, "build_specialist", fake_build)
+    out = par.fan_out(("coder", "deepresearch", "judge"), "do the thing", FakeModel())
+    assert set(out) == {"coder", "deepresearch", "judge"}
+    assert out["coder"] == "answer from coder"
+    assert len(seen) == 3
+
+
+def test_fan_out_rejects_unknown_role():
+    import pytest
+
+    from swarmagents import parallel as par
+
+    with pytest.raises(ValueError, match="unknown roles"):
+        par.fan_out(("not-a-role",), "x", "openai")
+
+
+def test_judge_over_candidates(monkeypatch):
+    from swarmagents import parallel as par
+
+    class FakeModel:
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+    calls = []
+
+    def fake_build(role, model, handoffs, tools):
+        calls.append(role)
+
+        class Agent:
+            def invoke(self, payload, config=None):
+                content = payload["messages"][0]["content"]
+                suffix = "verdict" if "Candidates:" in content else role
+                return {"messages": [type("M", (), {"content": f"out:{suffix}"})()]}
+
+        return Agent()
+
+    monkeypatch.setattr(par, "build_specialist", fake_build)
+    result = par.judge_over_candidates(
+        ("coder", "optimizer"), "improve this", FakeModel()
+    )
+    assert set(result["candidates"]) == {"coder", "optimizer"}
+    assert result["verdict"].startswith("out:")
+    assert "judge" in calls
+
+
+def test_parallel_backend_report():
+    from swarmagents.parallel import parallel_backend
+
+    report = parallel_backend()
+    assert "threads" in report
+
+
+def test_extract_facts_offline():
+    from swarmagents.extraction import extract_facts
+
+    facts = extract_facts("The deployment failed at 14:02 due to a timeout.")
+    assert isinstance(facts, list)
+    assert all(isinstance(f, dict) for f in facts)
+
+
+def test_neo4j_retriever_none_without_credentials(monkeypatch):
+    from swarmagents.extraction import neo4j_retriever
+
+    monkeypatch.delenv("NEO4J_URI", raising=False)
+    monkeypatch.delenv("NEO4J_USERNAME", raising=False)
+    monkeypatch.delenv("NEO4J_PASSWORD", raising=False)
+    assert neo4j_retriever() is None
