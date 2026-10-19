@@ -197,3 +197,57 @@ lógica).
   `add_conditional_edges`, `compile`
 - LangChain v1 `create_agent(model, tools, system_prompt, name)`: assinatura
   estável usada por todos os agentes deste repo
+
+## 11. Pesquisa externa: multiagentes em produção (2026-10-18)
+
+Fontes: DeepWiki (langchain-ai/langgraph), web research (Anthropic
+engineering, surveys 2025-2026). Achados aplicados e verificados:
+
+### Números de referência (Anthropic, medidos)
+
+- Sistema multiagente consome **~15x os tokens** de um chat single-agent
+  (single agent ~4x). Uso de tokens explica **80% da variância** de
+  performance em research evals.
+- Sistema multiagente Opus-4-líder + Sonnet-4 subagents superou o
+  single-agent Opus 4 em **90.2%** na avaliação de research deles.
+- Implicação: paralelismo de agentes compensa em pesquisa/exploração,
+  não em tarefas lineares.
+
+### Os 4 alavancas de produção (Paiteq/Anthropic, convergentes)
+
+1. **Resumo rolante** no supervisor em vez de histórico completo
+2. **JSON estruturado** dos subagentes em vez de prosa livre
+3. **Modelo mais barato competente por papel** (router barato, worker médio,
+   planner forte)
+4. **Turn cap duro** para loops fugitivos — IMPLEMENTADO nesta sessão:
+   `SWARM_RECURSION_LIMIT` (default 50) aplicado via `recursion_limit` em
+   `tracing.py` e `parallel.py`
+
+### Topologias dominantes em produção (2026)
+
+- Supervisor e pipeline sequencial dominam; hierárquico
+  (supervisor-de-supervisores) para fluxos genuinamente complexos;
+  swarm/blackboard brilham em research-and-summarise paralelo.
+- Frameworks são camada fina: outer loop LangGraph/CrewAI em volta de
+  inner calls de vendor SDKs (Anthropic/OpenAI Agents SDK).
+- O padrão swarm converge no formato: planner decompõe → fan-out
+  paralelo de research workers → um writer sintetiza — exatamente o que
+  `parallel.fan_out` + `judge_over_candidates` implementam.
+
+### Gotchas de handoff (LangGraph DeepWiki, verificado no código)
+
+- **History bleed-through**: o agente receptor vê todo o histórico do
+  transmissor a menos que filtrado — usar input filter / state explícito.
+- **Guardrails de saída**: nenhum agente "possui" a resposta final em um
+  swarm; guardrails devem rodar em TODOS os agentes que podem responder
+  ao usuário.
+- **State isolation**: subgrafos com checkpointer precisam de nomes de nó
+  distintos ou config explícita, senão contaminam estado entre si.
+- `create_react_agent` está deprecado → `create_agent` (já usamos o correto).
+- Interrupts em subgrafos borbulham ao pai; retome com `Command(resume=...)`.
+
+### Decisão design-vs-framework (Anthropic, "Building effective agents")
+
+Workflows (caminhos pré-definidos) primeiro; agentes (fluxo dirigido pelo
+modelo) só quando o fluxo é genuinamente desconhecido; multiagente só
+quando single-agent fica aquém — o custo é ~4x adicional em tokens.

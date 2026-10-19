@@ -21,6 +21,7 @@ from swarmagents.kernels import gil_enabled
 from swarmagents.providers import get_chat_model
 
 _MAX_WORKERS = min(32, (os.cpu_count() or 4) * 4)
+DEFAULT_RECURSION_LIMIT = int(os.getenv("SWARM_RECURSION_LIMIT", "50"))
 
 
 def _compile(graph: Any) -> Any:
@@ -62,7 +63,8 @@ def fan_out(
         compiled = _compile(agent)
         try:
             result = compiled.invoke(
-                {"messages": [{"role": "user", "content": prompt}]}
+                {"messages": [{"role": "user", "content": prompt}]},
+                config={"recursion_limit": DEFAULT_RECURSION_LIMIT},
             )
             return role, str(result["messages"][-1].content)
         except Exception as err:  # noqa: BLE001
@@ -108,7 +110,8 @@ def judge_over_candidates(
         "then declare the best with justification."
     )
     result = compiled.invoke(
-        {"messages": [{"role": "user", "content": verdict_prompt}]}
+        {"messages": [{"role": "user", "content": verdict_prompt}]},
+        config={"recursion_limit": DEFAULT_RECURSION_LIMIT},
     )
     return {
         "candidates": candidates,

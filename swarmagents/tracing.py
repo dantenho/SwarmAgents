@@ -23,6 +23,9 @@ if TYPE_CHECKING:
     from langchain_core.tracers import BaseTracer
 
 
+DEFAULT_RECURSION_LIMIT = int(os.getenv("SWARM_RECURSION_LIMIT", "50"))
+
+
 def tracing_enabled() -> bool:
     """Return True when LangSmith tracing is configured."""
     return os.getenv("LANGSMITH_TRACING", "").lower() in ("true", "1", "yes") and bool(
@@ -91,12 +94,12 @@ def run_swarm_traced(
     else:
         swarm = graph
     tracer = get_tracer()
-    config: dict[str, Any] = {}
+    config: dict[str, Any] = {"recursion_limit": DEFAULT_RECURSION_LIMIT}
     if tracer is not None:
         config["callbacks"] = [tracer]
     result = swarm.invoke(
         {"messages": [{"role": "user", "content": message}]},
-        config=config or None,
+        config=config,
     )
     return str(result["messages"][-1].content)
 
