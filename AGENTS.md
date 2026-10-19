@@ -120,7 +120,8 @@ exist. The kernels dispatcher avoids numpy entirely outside the numba path.
 ## Multiagentes (resumo operacional)
 
 - Dois padrões: handoff (swarm.py/agents.py) e supervisor (graph.py).
-- 8 especialistas em `swarmagents/agents.py`; entrada padrão codereviewer.
+- 13 especialistas em `swarmagents/agents.py` (8 originais + graphcreator,
+  compilator, refactor, optimizer, filemanager); entrada padrão codereviewer.
 - Sempre `.compile()` o StateGraph antes de invoke; fakes de teste devem
   retornar AIMessage real; prompts de papel precisam declarar quando
   transferir e quando responder direto. Detalhes completos em

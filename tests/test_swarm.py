@@ -201,6 +201,11 @@ def test_specialist_roles_defined():
         "guidecreator",
         "judge",
         "caching",
+        "graphcreator",
+        "compilator",
+        "refactor",
+        "optimizer",
+        "filemanager",
     }
     assert set(SPECIALIST_ROLES) == expected
     for role, prompt in SPECIALIST_ROLES.items():
@@ -231,7 +236,7 @@ def test_specialist_swarm_builds(monkeypatch):
 
     swarm = create_specialist_swarm(FakeModel())
     assert swarm["default"] == "codereviewer"
-    assert len(swarm["agents"]) == 8
+    assert len(swarm["agents"]) == 13
     from swarmagents.agents import SPECIALIST_ROLES
 
     names = {a["name"] for a in swarm["agents"]}

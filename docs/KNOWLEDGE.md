@@ -144,7 +144,16 @@ AGENTS.md             # agent guidance + verified findings
 | Handoff swarm (langgraph-swarm) | `swarmagents/swarm.py`, `swarmagents/agents.py` | Controle passa agente→agente via `create_handoff_tool`; sem ponto único; cada agente decide transferir. Ideal para especialidades |
 | Supervisor-worker (StateGraph) | `swarmagents/graph.py` | Supervisor planeja, delega e sintetiza; melhor quando se quer ponto de coordenação e ciclo plan→delegate→collect |
 
-### Papéis especializados (8) e seus fluxos
+### Papéis especializados (13) e seus fluxos
+
+Novos papéis (2ª leva): **graphcreator** (arquitetura de grafos/DAGs de
+agentes, exportáveis como Mermaid/Cypher), **compilator** (builds,
+toolchain, linking — Python wheels, cargo/maturin, CMake), **refactor**
+(reestruturação sem mudança de comportamento, testes como rede de
+segurança), **optimizer** (profiling, escolha de backend
+numba/rayon/freethread, benchmarks quantificados), **filemanager**
+(organização do repositório e sincronização dos manifests — nunca edita
+lógica).
 
 - `coder → codereviewer`: loop de verificação obrigatório pós-escrita
 - `debugger → coder`: debugger isola causa-raiz, coder implementa a correção
