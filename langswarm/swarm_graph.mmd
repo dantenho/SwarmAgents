@@ -1,0 +1,10 @@
+graph LR
+    researcher["researcher"]
+    analyst["analyst"]
+    writer["writer"]
+    researcher -->|hands off| analyst
+    researcher -->|hands off| writer
+    analyst -->|hands off| researcher
+    analyst -->|hands off| writer
+    writer -->|hands off| researcher
+    writer -->|hands off| analyst
