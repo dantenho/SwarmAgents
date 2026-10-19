@@ -34,7 +34,7 @@ def extract_facts(text: str) -> list[dict[str, Any]]:
 
     try:
         result = extract(text)
-    except TypeError, ValueError:
+    except Exception:
         return []
     if isinstance(result, dict) and "extraction" in result:
         records = result["extraction"]
