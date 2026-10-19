@@ -116,3 +116,12 @@ exist. The kernels dispatcher avoids numpy entirely outside the numba path.
   `torch.ao.quantization.quantize_dynamic` (only quantization API available).
 - LangGraph `StateGraph(TypedDict)` needs `cast(Any, schema)` to satisfy
   ty's structural TypedDictLike bound (runtime is fine either way).
+
+## Multiagentes (resumo operacional)
+
+- Dois padrões: handoff (swarm.py/agents.py) e supervisor (graph.py).
+- 8 especialistas em `swarmagents/agents.py`; entrada padrão codereviewer.
+- Sempre `.compile()` o StateGraph antes de invoke; fakes de teste devem
+  retornar AIMessage real; prompts de papel precisam declarar quando
+  transferir e quando responder direto. Detalhes completos em
+  docs/KNOWLEDGE.md seção 10.

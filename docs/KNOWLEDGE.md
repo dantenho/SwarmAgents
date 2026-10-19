@@ -134,3 +134,57 @@ AGENTS.md             # agent guidance + verified findings
 - Repo PR (code): https://github.com/dantenho/SwarmAgents/pull/1
 - Branch: `vibe/swarm-workflow-2a5989`
 - Google Drive folder: https://drive.google.com/drive/folders/13m7fR-8qRKHYwnwdNkNWTHln29qECaY0
+
+## 10. Multiagentes: padrões e conhecimento operacional (2026-10-18)
+
+### Padrões de orquestração implementados neste repo
+
+| Padrão | Módulo | Quando usar |
+|---|---|---|
+| Handoff swarm (langgraph-swarm) | `swarmagents/swarm.py`, `swarmagents/agents.py` | Controle passa agente→agente via `create_handoff_tool`; sem ponto único; cada agente decide transferir. Ideal para especialidades |
+| Supervisor-worker (StateGraph) | `swarmagents/graph.py` | Supervisor planeja, delega e sintetiza; melhor quando se quer ponto de coordenação e ciclo plan→delegate→collect |
+
+### Papéis especializados (8) e seus fluxos
+
+- `coder → codereviewer`: loop de verificação obrigatório pós-escrita
+- `debugger → coder`: debugger isola causa-raiz, coder implementa a correção
+- `deepresearch → guidecreator`: pesquisa vira documentação
+- `judge`: arbitra entre candidatos com critérios explícitos
+- `memory`: único papel com acesso ao vector store; os demais pedem a ele
+- `caching`: aconselha políticas de cache; coder implementa
+- `codereviewer` é o agente de entrada padrão do enxame de especialistas
+
+### Lições verificadas (deste projeto)
+
+1. **Graphs não-compilados**: `create_swarm` retorna `StateGraph` não-compilado —
+   sempre `.compile()` antes de `.invoke()` (bug real corrigido em tracing.py).
+2. **Fakes precisam de AIMessage real**: ao invocar agentes LangChain v1 em
+   testes, o modelo falso deve retornar `langchain_core.messages.AIMessage` —
+   objetos ad-hoc falham na coerção de mensagens (`MESSAGE_COERCION_FAILURE`).
+3. **Handoffs custam tokens**: cada transferência reinjeta o histórico; em
+   cadeias longas (research→analyst→writer) o contexto cresce linearmente.
+   Para 8 especialistas, prefira transferências diretas ao hub-and-spoke.
+4. **Estado compartilhado**: o `SwarmState` (TypedDict) acumula
+   `messages` + campos de trabalho; `total=False` permite atualização
+   parcial por nó — mas ty exige `cast(Any, schema)` no StateGraph.
+5. **Prompts de papel**: cada prompt deve declarar (a) a especialidade,
+   (b) quando transferir, (c) quando responder direto — sem (b)/(c) o
+   enxame oscila entre agentes ou nunca transfere.
+6. **Backend do modelo é uniforme**: todos os 11 agentes (3 do enxame
+   base + 8 especialistas) aceitam qualquer um dos 20 provedores via
+   `get_chat_model` — modelos diferentes por papel são um kwargs de distância.
+
+### Métricas de multiagentes (o que observar)
+
+- **Hop count**: número de transferências por tarefa (proxy de custo/latência)
+- **Cobertura de papel**: fração de tarefas que tocam cada especialista
+- **Tempo por agente**: exposto via LangSmith tracing (`swarmagents/tracing.py`)
+- **Contexto acumulado**: tamanho final de `messages` (token budget)
+
+### Referências do ecossistema
+
+- `langgraph-swarm` 0.1.0: `create_swarm(agents, default_active_agent=...)`
+- `langgraph.prebase`/`StateGraph`: `add_node`, `add_edge`,
+  `add_conditional_edges`, `compile`
+- LangChain v1 `create_agent(model, tools, system_prompt, name)`: assinatura
+  estável usada por todos os agentes deste repo
