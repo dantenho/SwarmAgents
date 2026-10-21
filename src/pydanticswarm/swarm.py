@@ -37,6 +37,7 @@ class Subtask(BaseModel):
     required_skills: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
     max_retries: int = Field(default=2, ge=0)
+    division: str | None = None
     _retries: int = 0
 
     def record_retry(self) -> None:
