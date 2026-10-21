@@ -33,7 +33,11 @@ class LLMBackend(Protocol):
 
 
 class GoogleGenAIBackend:
-    """google-genai provider (no API key needed for mocked tests)."""
+    """google-genai provider using the native async client (`client.aio`).
+
+    Verified against googleapis/python-genai docs: `client.aio.models.
+    generate_content(...)` is the documented async path — no to_thread needed.
+    """
 
     def __init__(self, model: str = "gemini-2.0-flash") -> None:
         self.model = model
@@ -44,8 +48,8 @@ class GoogleGenAIBackend:
 
         if self._client is None:
             self._client = genai.Client()
-        resp = await asyncio.to_thread(
-            self._client.models.generate_content, model=self.model, contents=prompt
+        resp = await self._client.aio.models.generate_content(
+            model=self.model, contents=prompt
         )
         return resp.text or ""
 

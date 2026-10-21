@@ -1,5 +1,13 @@
 # AGENTS.md — SwarmAgents Architecture
 
+## Working rule
+
+**Search before you code.** Any code touching an external API, framework, or
+version-sensitive surface must be preceded by a web search verifying the
+current API shape. Example caught by this rule: google-genai exposes a native
+async client (`client.aio.models.generate_content`) — wrapping the sync client
+in `asyncio.to_thread` is unnecessary and slower.
+
 Analysis of the 5 frameworks and the design of **our own swarm system**,
 built on plain Pydantic (no LangChain/LangGraph dependency).
 
