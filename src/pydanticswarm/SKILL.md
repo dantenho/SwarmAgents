@@ -1,8 +1,9 @@
-# SKILL.md — PydanticSwarm v0.2
+# SKILL.md — PydanticSwarm v0.3
 
-Criar orquestrações de agentes (swarm) com **Pydantic puro** — sem LangChain/LangGraph.
+Criar orquestrações de agentes (swarm) com **Pydantic puro** — sem LangChain/LangGraph obrigatórios.
 Skill completa: criação de agentes, matriz de decisão, comunicação, self-learning,
-afinidade e os 3 modos de divisão de tarefas.
+afinidade, os 3 modos de divisão de tarefas e **merge de frameworks**
+(PydanticAI + Google GenAI + LangGraph atrás de um protocolo único).
 
 Análise dos 5 frameworks (PydanticAI, Google ADK, OpenAI SDK, LangGraph, CrewAI)
 e o design derivado: **`Agents/AGENTS.md`**.
@@ -77,7 +78,7 @@ e o design derivado: **`Agents/AGENTS.md`**.
 
 ---
 
-## API (v0.2)
+## API (v0.3)
 
 Tudo exposto no top-level `pydanticswarm`:
 
@@ -89,6 +90,37 @@ Tudo exposto no top-level `pydanticswarm`:
 | `MessageBus`, `Envelope`, `MessageKind`, `Blackboard` | comunicação tipada e auditável |
 | `MemoryStore`, `Outcome`, `Lesson` | self-learning (fast + slow loop) |
 | `AffinityTracker` | score aprendido por (agente, skill) |
+| `LLMBackend`, `MergedAgent`, `MergedSwarm`, `MergedPlan`, `PydanticAIBackend`, `GoogleGenAIBackend` | **merge de frameworks**: qualquer LLM provider atrás de um Protocol |
+
+### Merge de frameworks (v0.3)
+
+```
+     LLMBackend (Protocol, runtime_checkable)
+     ┌────────────┐ ┌────────────┐ ┌────────┐
+     │ PydanticAI │ │ Google     │ │ fake/  │
+     │ Backend    │ │ GenAI      │ │ mock   │
+     └─────┬──────┘ └─────┬──────┘ └───┬────┘
+           └──────────┬─────┴──────────┘
+                      ▼
+           MergedAgent (spec + backend)
+           prompt → generate → AgentResult validado
+           (erro é dado, não exceção)
+                      ▼
+           MergedSwarm — grafo explícito (estilo LangGraph):
+           plan → fan_out (round-robin paralelo)
+                → aggregate (Outcomes no MemoryStore)
+```
+
+O que cada framework contribuiu:
+
+- **PydanticAI** → validar na fronteira: toda saída é modelo Pydantic; falha vira `error=`
+- **Google GenAI** → isolar providers: client lazy por agente, atrás de Protocol
+- **LangGraph** → orquestrar como grafo de dados (`swarm.graph`), replayável
+
+Lição aprendida (gravada como `Lesson` no `MemoryStore` ao construir o swarm):
+"validate at the boundary, isolate providers, orchestrate as a graph".
+
+Backends reais são lazy — testes rodam com `FakeBackend` sem API keys.
 
 ## Uso rápido
 
@@ -146,5 +178,6 @@ outcome = asyncio.run(
 
 - `examples/agents_folder_demo.py` — end-to-end: matriz, afinidade, divisão, bus, blackboard
 - `examples/pydantic_swarm_demo.py` — demo DAG com dependências
-- `tests/test_swarm.py` + `tests/test_swarm_capabilities.py` — 16 testes
+- `tests/test_swarm.py` + `tests/test_swarm_capabilities.py` + `tests/test_merge.py` — 23 testes
 - `Agents/AGENTS.md` — análise dos 5 frameworks e design rationale
+- Knowledge base (Drive): `SwarmAgents_Knowledge_Base.md` — inclui este trabalho
