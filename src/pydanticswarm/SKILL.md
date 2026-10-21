@@ -1,7 +1,11 @@
-# SKILL.md — PydanticSwarm
+# SKILL.md — PydanticSwarm v0.2
 
-Criar orquestrações de agentes (swarm) com **Pydantic** puro — sem LangChain/LangGraph.
-Este skill descreve o processo de criação de agentes, paralelismo e divisão de tarefas.
+Criar orquestrações de agentes (swarm) com **Pydantic puro** — sem LangChain/LangGraph.
+Skill completa: criação de agentes, matriz de decisão, comunicação, self-learning,
+afinidade e os 3 modos de divisão de tarefas.
+
+Análise dos 5 frameworks (PydanticAI, Google ADK, OpenAI SDK, LangGraph, CrewAI)
+e o design derivado: **`Agents/AGENTS.md`**.
 
 ---
 
@@ -14,117 +18,133 @@ Este skill descreve o processo de criação de agentes, paralelismo e divisão d
                               └────────────┬─────────────┘
                                            │
                                            ▼
-                              ┌──────────────────────────┐
-                              │      PLANNER (LLM)       │
-                              │  decompõe o objetivo em  │
-                              │      subtasks[]         │
-                              └────────────┬─────────────┘
-                                           │
-                                           ▼
                           ┌────────────────────────────────┐
-                          │        TASK QUEUE  (FIFO)      │
-                          │   subtasks aguardando workers  │
-                          └───────┬──────────────────┬───┘
-                                  │                  │
-                     ┌────────────▼───┐        ┌──────▼──────────┐
-                     │  DISPATCHER    │        │   DISPATCHER    │
-                     │ (round-robin / │  ...   │  (capacity-     │
-                     │  skill match)  │        │   aware)        │
-                     └────────────┬───┘        └──────┬──────────┘
-                                  │                   │
-                     ┌────────────▼───────────────────▼──────────┐
-                     │            PARALLEL WORKERS               │
-                     │  ┌─────────┐ ┌─────────┐ ┌─────────┐     │
-                     │  │ Agent A │ │ Agent B │ │ Agent C │ ... │
-                     │  │ (async) │ │ (async) │ │ (async) │     │
-                     │  └────┬────┘ └────┬────┘ └────┬────┘     │
-                     └───────┼───────────┼───────────┼──────────┘
-                             │           │           │
-                             ▼           ▼           ▼
-                     ┌────────────────────────────────────────┐
-                     │            RESULT BUS (asyncio.Queue)  │
-                     └───────────────────────┬────────────────┘
-                                             │
-                                             ▼
-                     ┌────────────────────────────────────────┐
-                     │           AGGREGATOR / REDUCER        │
-                     │  valida (Pydantic), mescla, resume     │
-                     └───────────────────────┬────────────────┘
-                                             │
-                              ┌──────────────┴──────────────┐
-                              ▼                             ▼
-                   ┌─────────────────────┐        ┌──────────────────┐
-                   │  goal satisfeito?   │  NÃO   │  re-enfileira    │
-                   │  (critério/LLM      ├───────►│  subtasks novas  │──► TASK QUEUE
-                   │   judge)            │        │  (refinamento)   │
-                   └──────────┬──────────┘        └──────────────────┘
-                              │ SIM
-                              ▼
-                   ┌─────────────────────┐
-                   │     FINAL ANSWER   │
-                   └─────────────────────┘
+                          │   DECISION MATRIX (determin.)  │
+                          │  REJECT / DIRECT / FAN-OUT-*  │
+                          │  / SPECIALIZE / AFFINITY       │
+                          └──────┬───────────┬────────────┘
+                                 │           │
+                    ═══ SAME task ══   ═══ different/divisible ══
+                                 │           │
+              ┌──────────────────▼──┐   ┌────▼──────────────────┐
+              │ FAN-OUT-SAME        │   │ PLANNER decomposes    │
+              │ N agents, same task │   │ into Subtasks (DAG)   │
+              │ vote (majority) ou  │   └────┬──────────────────┘
+              │ race (first valid)  │        │
+              └──────────┬──────────┘        ▼
+                         │            ┌─────────────────────────┐
+                         │            │ TASK QUEUE (FIFO)       │
+                         │            └────┬──────────────┬────┘
+                         │                 │              │
+                         ▼                 ▼              ▼
+              ┌────────────────┐  ┌────────────────────────────────┐
+              │ REDUCER        │  │ DISPATCHER (affinity-aware)    │
+              │ vote / race    │  │ argmax(score) among qualified  │
+              └───────┬────────┘  └────┬───────────────────────────┘
+                      │               ▼
+                      │   ┌────────────────────────────────────┐
+                      │   │ PARALLEL WORKERS (asyncio)         │
+                      │   │ AgentSpec + skill match + capacity  │
+                      │   └────┬───────────────────────────┬───┘
+                      │        │                           │
+                      ▼        ▼                           ▼
+              ┌──────────────────────────────────────────────────┐
+              │      MESSAGE BUS (typed Envelope, audit log)     │
+              │      REQUEST / RESULT / BROADCAST / HANDOFF     │
+              └───────────────────────────┬──────────────────────┘
+                                          ▼
+              ┌──────────────────────────────────────────────────┐
+              │ AGGREGATOR: valida com Pydantic antes de aceitar │
+              └───────────────────────────┬──────────────────────┘
+                                          │
+                          ┌───────────────┴───────────────┐
+                          ▼                               ▼
+              ┌─────────────────────┐          ┌─────────────────────┐
+              │ MEMORY STORE        │          │ goal satisfeito?    │
+              │ Outcome por         │          │ SIM → FINAL ANSWER  │
+              │ (agent, skill)      │          │ NÃO → novas subtasks│
+              │ + Lessons (JSON)    │          └─────────────────────┘
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │ AFFINITY ROUTER     │──► alimenta o DISPATCHER
+              │ score = coverage    │     (aprendizado fast loop)
+              │ + success_rate     │
+              │ − busyness          │
+              └─────────────────────┘
 ```
 
 ---
 
-## Os 5 estágios do processo
+## API (v0.2)
 
-1. **Criação de agentes** — cada agente é um modelo Pydantic (`AgentSpec`) com
-   `name`, `skills`, `model` e um handler async. Validação garante agentes bem formados.
-2. **Divisão de tarefas** — um `Planner` decompõe o objetivo em `Subtask`s
-   independentes (map). Subtasks dependentes viram grafo DAG opcional.
-3. **Paralelismo** — um `Dispatcher` distribui subtasks por uma workers
-   pool (`asyncio.Queue` + N corotinas worker). Cada worker roda de forma concorrente.
-4. **Agregação** — resultados chegam por um result bus e passam pelo
-   `Aggregator`, que valida cada saída com um modelo Pydantic (`T`) antes de
-   aceitar (reduce). Falha de validação → retry ou re-enfileiramento.
-5. **Loop de refinamento** — um critério de conclusão (heurístico ou LLM judge)
-   decide se encerra ou gera novas subtasks.
+Tudo exposto no top-level `pydanticswarm`:
 
----
+| Import | Papel |
+|---|---|
+| `AgentSpec`, `Subtask`, `Swarm`, `SwarmOutcome`, `AgentResult` | núcleo: agentes declarativos + run loop |
+| `Orchestrator` | matriz de decisão + roteamento por afinidade |
+| `divide_same`, `divide_multiple`, `divide_different`, `DivisionMode` | 3 modos de divisão (vote/race, fan-out, especialização) |
+| `MessageBus`, `Envelope`, `MessageKind`, `Blackboard` | comunicação tipada e auditável |
+| `MemoryStore`, `Outcome`, `Lesson` | self-learning (fast + slow loop) |
+| `AffinityTracker` | score aprendido por (agente, skill) |
 
-## API rápida
+## Uso rápido
 
 ```python
 import asyncio
-from pydanticswarm import AgentSpec, Swarm, Subtask
+from pydanticswarm import (
+    AgentSpec,
+    DivisionMode,
+    MemoryStore,
+    Orchestrator,
+    Subtask,
+    Swarm,
+)
+
+
+async def handler(agent, subtask):
+    return f"[{agent.name}] {subtask.description}: done"
+
 
 agents = [
-    AgentSpec(name="researcher", skills=["search", "summarize"]),
-    AgentSpec(name="coder", skills=["code", "test"]),
-    AgentSpec(name="writer", skills=["write", "edit"]),
+    AgentSpec(name="coder", skills=["code"]),
+    AgentSpec(name="writer", skills=["write"]),
+    AgentSpec(name="reviewer-a", skills=["review"]),
+    AgentSpec(name="reviewer-b", skills=["review"]),
 ]
+swarm = Swarm(agents=agents, handler=handler)
+orch = Orchestrator(agents=agents, swarm=swarm, memory=MemoryStore())
 
-swarm = Swarm(agents=agents)
-
-result = asyncio.run(
-    swarm.run(
-        goal="Write a blog post about Pydantic",
-        plan=[
+outcome = asyncio.run(
+    orch.run(
+        goal="ship feature",
+        subtasks=[
+            Subtask(id="a", description="write docs", required_skills=["write"]),
+            Subtask(id="b", description="code it", required_skills=["code"]),
             Subtask(
-                id="1",
-                description="Research Pydantic features",
-                required_skills=["search"],
-            ),
-            Subtask(
-                id="2", description="Write code examples", required_skills=["code"]
-            ),
-            Subtask(id="3", description="Compose the post", required_skills=["write"]),
+                id="c",
+                description="review",
+                required_skills=["review"],
+                division=DivisionMode.SAME,
+            ),  # consenso: 2 agentes + vote
         ],
     )
 )
-print(result.summary)
 ```
 
-## O que a implementação garante
+## Design guarantees
 
-- Cada resultado é validado por Pydantic antes de entrar na agregação.
-- Workers são intercambiáveis: qualquer agente com a skill exigida pode pegar a subtask.
-- O dispatcher é capacity-aware: não pega mais subtasks do que workers disponíveis.
-- Falhas ficam isoladas por subtask (uma subtask falhar não derruba o swarm).
+- **Determinístico primeiro**: a matriz de decisão roda sem LLM; afinidade só desempata
+- **Validação Pydantic em toda fronteira**: envelopes, outcomes, results
+- **Falha isolada por subtask**: um agente flaky não derruba o swarm (demo incluso)
+- **Aprendizado sem fine-tuning**: stats de sucesso afetam roteamento imediatamente (fast loop); `Lesson`s persistem em JSON (slow loop)
+- **Comunicação auditável**: todo tráfego passa pelo bus com log append-only
 
-## Referência
+## Exemplos e testes
 
-- Implementação: `src/pydanticswarm/`
-- Exemplo completo: `examples/` (em inglês no código, docs em português no README da skill)
-- Testes: `tests/test_swarm.py`
+- `examples/agents_folder_demo.py` — end-to-end: matriz, afinidade, divisão, bus, blackboard
+- `examples/pydantic_swarm_demo.py` — demo DAG com dependências
+- `tests/test_swarm.py` + `tests/test_swarm_capabilities.py` — 16 testes
+- `Agents/AGENTS.md` — análise dos 5 frameworks e design rationale
