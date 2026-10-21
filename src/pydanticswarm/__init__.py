@@ -15,6 +15,14 @@ from pydanticswarm.division import (
     divide_same,
 )
 from pydanticswarm.learning import Lesson, MemoryStore, Outcome
+from pydanticswarm.merge import (
+    GoogleGenAIBackend,
+    LLMBackend,
+    MergedAgent,
+    MergedPlan,
+    MergedSwarm,
+    PydanticAIBackend,
+)
 from pydanticswarm.orchestrator import Orchestrator
 from pydanticswarm.swarm import AgentResult, AgentSpec, Subtask, Swarm, SwarmOutcome
 
@@ -27,9 +35,15 @@ __all__ = [
     "DivisionOutcome",
     "Envelope",
     "Lesson",
+    "LLMBackend",
     "MemoryStore",
+    "MergedAgent",
+    "MergedPlan",
+    "MergedSwarm",
     "MessageBus",
     "MessageKind",
+    "PydanticAIBackend",
+    "GoogleGenAIBackend",
     "Orchestrator",
     "Outcome",
     "Subtask",
