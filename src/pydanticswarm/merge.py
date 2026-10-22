@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from pydanticswarm.learning import Lesson, MemoryStore
 from pydanticswarm.swarm import AgentResult, AgentSpec, Subtask
+from pydanticswarm.tokens import PromptSpec
 
 
 @runtime_checkable
@@ -84,10 +85,11 @@ class MergedAgent:
         self.backend = backend
 
     async def execute(self, subtask: Subtask) -> AgentResult:
-        prompt = (
-            f"You are {self.spec.name} with skills {self.spec.skills}. "
-            f"Complete the task: {subtask.description}"
-        )
+        prompt = PromptSpec(
+            agent_name=self.spec.name,
+            agent_skills=self.spec.skills,
+            task_description=subtask.description,
+        ).render()
         try:
             raw = await asyncio.wait_for(self.backend.generate(prompt), timeout=30.0)
             return AgentResult(
@@ -115,11 +117,15 @@ class MergedSwarm:
         self,
         agents: Sequence[MergedAgent],
         memory: MemoryStore | None = None,
+        token_budget: int | None = None,
     ) -> None:
         if not agents:
             raise ValueError("merged swarm needs at least one agent")
         self.agents = list(agents)
         self.memory = memory or MemoryStore()
+        from pydanticswarm.tokens import TokenMeter
+
+        self.tokens = TokenMeter(budget=token_budget)
         self.graph: dict[str, list[str]] = {"plan": [], "fan_out": [], "aggregate": []}
         self.graph["plan"] = ["fan_out"]
         self.graph["fan_out"] = ["aggregate"]
@@ -155,7 +161,23 @@ class MergedSwarm:
             agent = self.agents[i % len(self.agents)]
             assignments.append((agent, sub))
 
-        results = await asyncio.gather(*(a.execute(s) for a, s in assignments))
+        # Bounded parallelism: fixed workers over a bounded queue keep memory
+        # constant and cap concurrency (backpressure instead of task explosion).
+        from pydanticswarm.parallel import WorkerPool
+
+        pool = WorkerPool(max_workers=min(8, max(1, len(assignments))))
+        for i, (agent, sub) in enumerate(assignments):
+            await pool.submit(i, lambda a=agent, s=sub: a.execute(s))
+        raw_results, _ = await pool.run()
+        results = [raw_results[i] for i in range(len(assignments))]
+
+        for agent, sub in assignments:
+            prompt = PromptSpec(
+                agent_name=agent.spec.name,
+                agent_skills=agent.spec.skills,
+                task_description=sub.description,
+            ).render()
+            self.tokens.record(agent.spec.name, prompt, "", cached_prefix=True)
 
         from pydanticswarm.learning import Outcome
 

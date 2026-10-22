@@ -24,7 +24,9 @@ from pydanticswarm.merge import (
     PydanticAIBackend,
 )
 from pydanticswarm.orchestrator import Orchestrator
+from pydanticswarm.parallel import PoolStats, WorkerPool, bounded_gather
 from pydanticswarm.swarm import AgentResult, AgentSpec, Subtask, Swarm, SwarmOutcome
+from pydanticswarm.tokens import PromptSpec, TokenMeter, TokenUsage, estimate_tokens
 
 __all__ = [
     "AffinityTracker",
@@ -46,11 +48,18 @@ __all__ = [
     "GoogleGenAIBackend",
     "Orchestrator",
     "Outcome",
+    "PoolStats",
+    "PromptSpec",
     "Subtask",
     "Swarm",
     "SwarmOutcome",
+    "TokenMeter",
+    "TokenUsage",
+    "WorkerPool",
+    "bounded_gather",
     "divide_different",
     "divide_multiple",
     "divide_same",
+    "estimate_tokens",
 ]
-__version__ = "0.2.0"
+__version__ = "0.3.0"
