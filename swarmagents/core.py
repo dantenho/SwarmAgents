@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, TypeVar
@@ -58,7 +59,7 @@ class Swarm:
             async with semaphore:
                 agent_start = time.perf_counter()
                 try:
-                    if asyncio.iscoroutinefunction(agent):
+                    if inspect.iscoroutinefunction(agent):
                         coro: Awaitable[R] = agent(item)
                     else:
                         coro = asyncio.to_thread(agent, item)

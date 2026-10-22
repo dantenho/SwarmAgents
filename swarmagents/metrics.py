@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import math
 import time
-from collections.abc import Callable
 from threading import Lock
-from typing import Any
+from typing import Any, cast
 
 LabelValues = dict[str, Any]
 
@@ -106,14 +105,8 @@ class MetricsRegistry:
     def __init__(self) -> None:
         self._metrics: dict[tuple[str, str, tuple[tuple[str, Any], ...]], _Metric] = {}
         self._lock = Lock()
-        self._factories: dict[str, Callable[..., _Metric]] = {
-            "counter": Counter,
-            "gauge": Gauge,
-            "summary": Summary,
-        }
 
-    def _get(self, metric_type: str, name: str, labels: LabelValues | None) -> _Metric:
-        sample = self._factories[metric_type](name, labels)
+    def _get(self, sample: _Metric) -> _Metric:
         with self._lock:
             existing = self._metrics.get(sample.key)
             if existing is not None:
@@ -122,13 +115,13 @@ class MetricsRegistry:
             return sample
 
     def counter(self, name: str, labels: LabelValues | None = None) -> Counter:
-        return self._get("counter", name, labels)  # type: ignore[return-value]
+        return cast(Counter, self._get(Counter(name, labels)))
 
     def gauge(self, name: str, labels: LabelValues | None = None) -> Gauge:
-        return self._get("gauge", name, labels)  # type: ignore[return-value]
+        return cast(Gauge, self._get(Gauge(name, labels)))
 
     def summary(self, name: str, labels: LabelValues | None = None) -> Summary:
-        return self._get("summary", name, labels)  # type: ignore[return-value]
+        return cast(Summary, self._get(Summary(name, labels)))
 
     def increment(
         self, name: str, value: float = 1.0, labels: LabelValues | None = None
