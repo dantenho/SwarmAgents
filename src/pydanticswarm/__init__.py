@@ -27,6 +27,7 @@ from pydanticswarm.orchestrator import Orchestrator
 from pydanticswarm.parallel import PoolStats, WorkerPool, bounded_gather
 from pydanticswarm.swarm import AgentResult, AgentSpec, Subtask, Swarm, SwarmOutcome
 from pydanticswarm.tokens import PromptSpec, TokenMeter, TokenUsage, estimate_tokens
+from pydanticswarm.vectors import SearchStats, VectorStore, pick_index
 
 __all__ = [
     "AffinityTracker",
@@ -47,6 +48,7 @@ __all__ = [
     "PydanticAIBackend",
     "GoogleGenAIBackend",
     "Orchestrator",
+    "SearchStats",
     "Outcome",
     "PoolStats",
     "PromptSpec",
@@ -61,5 +63,7 @@ __all__ = [
     "divide_multiple",
     "divide_same",
     "estimate_tokens",
+    "pick_index",
+    "VectorStore",
 ]
 __version__ = "0.3.0"
