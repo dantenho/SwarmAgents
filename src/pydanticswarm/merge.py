@@ -174,8 +174,8 @@ class MergedSwarm:
         if isinstance(self.memory, SemanticMemoryStore):
             for _, sub in assignments:
                 lesson_map[sub.id] = [
-                    l.pattern
-                    for l in self.memory.relevant_lessons(sub.description, k=1)
+                    x.pattern
+                    for x in self.memory.relevant_lessons(sub.description, k=1)
                 ]
 
         pool = WorkerPool(max_workers=min(8, max(1, len(assignments))))
