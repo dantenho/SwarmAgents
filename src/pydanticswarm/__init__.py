@@ -25,6 +25,7 @@ from pydanticswarm.merge import (
 )
 from pydanticswarm.orchestrator import Orchestrator
 from pydanticswarm.parallel import PoolStats, WorkerPool, bounded_gather
+from pydanticswarm.retrieval import SemanticMemoryStore, embed_text
 from pydanticswarm.swarm import AgentResult, AgentSpec, Subtask, Swarm, SwarmOutcome
 from pydanticswarm.tokens import PromptSpec, TokenMeter, TokenUsage, estimate_tokens
 from pydanticswarm.vectors import SearchStats, VectorStore, pick_index
@@ -52,6 +53,7 @@ __all__ = [
     "Outcome",
     "PoolStats",
     "PromptSpec",
+    "SemanticMemoryStore",
     "Subtask",
     "Swarm",
     "SwarmOutcome",
@@ -63,6 +65,7 @@ __all__ = [
     "divide_multiple",
     "divide_same",
     "estimate_tokens",
+    "embed_text",
     "pick_index",
     "VectorStore",
 ]

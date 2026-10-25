@@ -20,10 +20,14 @@ class PromptSpec(BaseModel):
     agent_name: str
     agent_skills: list[str]
     task_description: str
+    lessons: list[str] = []  # learned patterns, injected after the stable prefix
 
     def render(self) -> str:
         # Stable, cacheable prefix (identical across tasks for one agent):
         prefix = f"You are {self.agent_name} with skills {self.agent_skills}. "
+        # Learned lessons (semi-stable; small and bounded by top-k):
+        if self.lessons:
+            prefix += "Known patterns: " + "; ".join(self.lessons) + ". "
         # Dynamic tail (changes per task, placed last to protect the cache):
         return f"{prefix}Complete the task: {self.task_description}"
 

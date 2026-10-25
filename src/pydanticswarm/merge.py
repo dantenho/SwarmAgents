@@ -22,6 +22,7 @@ from typing import Protocol, runtime_checkable
 from pydantic import BaseModel, Field
 
 from pydanticswarm.learning import Lesson, MemoryStore
+from pydanticswarm.retrieval import SemanticMemoryStore
 from pydanticswarm.swarm import AgentResult, AgentSpec, Subtask
 from pydanticswarm.tokens import PromptSpec
 
@@ -84,11 +85,14 @@ class MergedAgent:
         self.spec = spec
         self.backend = backend
 
-    async def execute(self, subtask: Subtask) -> AgentResult:
+    async def execute(
+        self, subtask: Subtask, lessons: list[str] | None = None
+    ) -> AgentResult:
         prompt = PromptSpec(
             agent_name=self.spec.name,
             agent_skills=self.spec.skills,
             task_description=subtask.description,
+            lessons=lessons or [],
         ).render()
         try:
             raw = await asyncio.wait_for(self.backend.generate(prompt), timeout=30.0)
@@ -165,9 +169,20 @@ class MergedSwarm:
         # constant and cap concurrency (backpressure instead of task explosion).
         from pydanticswarm.parallel import WorkerPool
 
+        # Semantic self-learning: top-1 most similar lesson per task
+        lesson_map: dict[str, list[str]] = {}
+        if isinstance(self.memory, SemanticMemoryStore):
+            for _, sub in assignments:
+                lesson_map[sub.id] = [
+                    l.pattern
+                    for l in self.memory.relevant_lessons(sub.description, k=1)
+                ]
+
         pool = WorkerPool(max_workers=min(8, max(1, len(assignments))))
         for i, (agent, sub) in enumerate(assignments):
-            await pool.submit(i, lambda a=agent, s=sub: a.execute(s))
+            await pool.submit(
+                i, lambda a=agent, s=sub: a.execute(s, lesson_map.get(s.id, []))
+            )
         raw_results, _ = await pool.run()
         results = [raw_results[i] for i in range(len(assignments))]
 
@@ -176,6 +191,7 @@ class MergedSwarm:
                 agent_name=agent.spec.name,
                 agent_skills=agent.spec.skills,
                 task_description=sub.description,
+                lessons=lesson_map.get(sub.id, []),
             ).render()
             self.tokens.record(agent.spec.name, prompt, "", cached_prefix=True)
 
